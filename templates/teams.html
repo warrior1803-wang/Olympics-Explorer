@@ -1,0 +1,100 @@
+<style>
+  /* .noUi-tooltip {
+    display: none;
+  }
+  .noUi-active .noUi-tooltip {
+    display: block;
+  } */
+  #slider-handles {
+      margin-top: 40px;
+  }
+</style>
+
+<div id="app">
+    <div>
+        <h3>奥运国家代表队历史奖牌统计</h3>
+        <p>请通过以下控件选择国家代表队及年份范围</p>
+    </div>
+  <vue-multiselect
+    v-model="multiselect_value"
+    :options="multiselect_options"
+    placeholder="Select a team"
+    :multiple="true"
+    @input="getTeamData"
+  ></vue-multiselect>
+  <div id="slider-handles"></div>
+  <hr />
+  <div id="vis"></div>
+</div>
+
+<script>
+  var app = new Vue({
+    el: "#app",
+    components: {
+      "vue-multiselect": VueMultiselect.default
+    },
+    data: {
+      multiselect_value: ["China", "Great Britain"],
+      multiselect_options: [],
+      years: { max: 2020, min: 1896 },
+      slider: null
+    },
+    methods: {
+      updateSlider() {
+        this.slider.noUiSlider.updateOptions({
+          range: {
+            min: this.years.min,
+            max: this.years.max
+          },
+          start: [this.years.min, this.years.max]
+        });
+      },
+      getTeamData() {
+        var that = this;
+        selected_year_range = this.slider.noUiSlider.get();
+        axios
+          .get("/team_data", {
+            params: {
+              team: that.multiselect_value,
+              year_min: selected_year_range[0],
+              year_max: selected_year_range[1]
+            }
+          })
+          .then(function(response) {
+            that.multiselect_options = response.data.teams;
+            vegaEmbed("#vis", response.data.figure, { mode: "vega-lite" }).then(function(data) {
+              data.view.addEventListener("click", that.onViewClicked);
+            });
+          });
+      },
+      onViewClicked(event, item) {
+        if (item && typeof item != "undefined") console.log(item.datum);
+      }
+    },
+    mounted() {
+      var that = this;
+      this.slider = document.getElementById("slider-handles");
+
+      noUiSlider.create(this.slider, {
+        start: [this.years.min, this.years.max],
+        range: {
+          min: [this.years.min],
+          max: [this.years.max]
+        },
+        tooltips: true,
+        format: {
+          from: function(value) {
+            return parseInt(value);
+          },
+          to: function(value) {
+            return parseInt(value);
+          }
+        }
+      });
+      this.slider.noUiSlider.on("change", function() {
+        that.getTeamData();
+      });
+      this.getTeamData();
+    }
+  });
+</script>

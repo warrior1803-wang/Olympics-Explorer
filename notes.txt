@@ -1,0 +1,4 @@
+requirements:
+	python >= 3.5.2
+		pip install flask altair vega
+		optional: matplotlib
